@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .required:after {
+    @apply text-red-500;
+    content: " *";
+  }
+}
