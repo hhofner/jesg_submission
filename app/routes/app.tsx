@@ -6,7 +6,7 @@ import VerificationStandardBlock from "~/components/VerificationStandardBlock";
 import AssuranceLevelBlock from "~/components/AssuranceLevelBlock";
 import ScopeVerificationBlock from "~/components/ScopeVerificationBlock";
 import DisclosureInformationBlock from "~/components/DisclosureInformationBlock";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getDb } from '../database.server.js'
 
 export const meta: MetaFunction = () => {
@@ -15,6 +15,26 @@ export const meta: MetaFunction = () => {
     { name: "description", content: "Welcome to Remix!" },
   ];
 };
+
+function getScore(questionType, scale) {
+  var numberScaler = 0.6;
+  if (questionType === 2) {
+    numberScaler = 0.4
+  }
+
+  if (scale === "minimal") {
+    return 0 * numberScaler;
+  }
+  if (scale === "developing") {
+    return 2 * numberScaler;
+  }
+  if (scale === "robust") {
+    return 3.5 * numberScaler;
+  }
+  if (scale === "exemplary") {
+    return 5 * numberScaler;
+  }
+}
 
 function ScoringDisplay({ scoring }: { scoring: string }) {
   return (
@@ -97,6 +117,8 @@ export default function Index() {
   const actionData = useActionData<typeof action>();
   const formRef = useRef(null);
   const data = useLoaderData();
+  const [viewBackend, setViewBackend] = useState(false);
+  const [questionType, setQuestionType] = useState(1);
 
   useEffect(() => {
     const resetFormOnPageShow = () => {
@@ -126,11 +148,20 @@ export default function Index() {
           <Button type="submit">Submit</Button>
         </Form>
         <div className="px-8 w-full space-y-8">
+          <div>
+            <h3 className="text-xl mb-2">Question</h3>
+            <Button className="mr-2" onClick={() => setQuestionType(1)} variant={questionType === 1 ? "default" : "outline"}>Question 1</Button>
+            <Button onClick={() => setQuestionType(2)} variant={questionType === 2 ? "default" : "outline"}>Question 2</Button>
+          </div>
           <h2 className="text-2xl">Scoring Summary</h2>
+          <h3 className="text-xl">Scale</h3>
           {actionData?.scoring ? <ScoringDisplay scoring={actionData?.scoring} /> : null}
+          <h3 className="text-xl">Score</h3>
+          {actionData?.scoring ? <p className="text-2xl">{getScore(questionType, actionData?.scoring)}</p> : null}
 
           <hr />
-          <h3 className="text-xl">Previous Submissions</h3>
+          <Button variant="outline" onClick={() => setViewBackend(!viewBackend)}>{!viewBackend ? "View" : "Hide"} previous submissions (database entries)</Button>
+          {viewBackend ? <><h3 className="text-xl">Previous Submissions</h3>
           <div className="flex flex-col gap-4 text-sm max-w-lg">
             {data.submissions.map((submission, index) => (
               <div key={index} className="flex gap-2">
@@ -146,7 +177,7 @@ export default function Index() {
                 <p><span className="font-bold">Scoring:</span> {submission.scoring}</p>
               </div>
             ))}
-          </div>
+          </div></> : null}
         </div>
       </main>
     </div>
