@@ -140,6 +140,7 @@ export default function Index() {
       </header>
       <main className="px-10 pt-4 flex gap-10">
         <Form method="post" ref={formRef} className="grid w-full max-w-md items-center gap-6 border-r-2 border-r-slate-100 pr-8">
+          <h2 className="text-lg font-semibold underline">Client view</h2>
           <VerifierBlock error={actionData?.errors?.verifierBlock} />
           <VerificationStandardBlock error={actionData?.errors?.verificationStandardBlock} />
           <AssuranceLevelBlock />
@@ -148,8 +149,9 @@ export default function Index() {
           <Button type="submit">Submit</Button>
         </Form>
         <div className="px-8 w-full space-y-8">
+          <h2 className="text-lg font-semibold underline">JESG view</h2>
           <div>
-            <h3 className="text-xl mb-2">Question</h3>
+            <h3 className="text-xl mb-2">Question (Scoring multiplier)</h3>
             <Button className="mr-2" onClick={() => setQuestionType(1)} variant={questionType === 1 ? "default" : "outline"}>Question 1</Button>
             <Button onClick={() => setQuestionType(2)} variant={questionType === 2 ? "default" : "outline"}>Question 2</Button>
           </div>
