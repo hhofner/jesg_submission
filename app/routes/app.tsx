@@ -17,6 +17,9 @@ export const meta: MetaFunction = () => {
 };
 
 function getScore(questionType, scale) {
+  if (scale === null) {
+    return 0
+  }
   var numberScaler = 0.6;
   if (questionType === 2) {
     numberScaler = 0.4
@@ -36,13 +39,14 @@ function getScore(questionType, scale) {
   }
 }
 
-function ScoringDisplay({ scoring }: { scoring: string }) {
+function ScoringDisplay({ scoring }: { scoring: string | null }) {
   return (
     <>
       {scoring === "minimal" ? <p className="text-4xl text-red-600">Minimal</p> : null}
       {scoring === "developing" ? <p className="text-4xl text-yellow-600">Developing</p> : null}
       {scoring === "robust" ? <p className="text-4xl text-lime-600">Robust</p> : null}
       {scoring === "exemplary" ? <p className="text-4xl text-emerald-600">Exemplary</p> : null}
+      {scoring === null ? <p className="text-4xl">No score yet</p> : null}
     </>
   );
 }
@@ -65,6 +69,8 @@ export async function action({ request, }: ActionFunctionArgs) {
   const scopeVerification = formData.getAll("scope-verification") as string[];
   const disclosureInformationFile = formData.get("disclosure-info-file") as string;
   const disclosureInformationUrl = formData.get("disclosure-info-url") as string;
+  const currentQ = formData.get("currentQ") as string;
+  console.log("currentQ:", currentQ)
 
   // Error verification
   if (verifier === "option-yes" && verifierName === "") {
@@ -110,7 +116,7 @@ export async function action({ request, }: ActionFunctionArgs) {
 
   await db.run(sql, params);
 
-  return json({ scoring: tempScoring }, { status: 200 });
+  return json({ scoring: tempScoring, currentQ }, { status: 200 });
 }
 
 export default function Index() {
@@ -119,6 +125,23 @@ export default function Index() {
   const data = useLoaderData();
   const [viewBackend, setViewBackend] = useState(false);
   const [questionType, setQuestionType] = useState(1);
+  const [currentQ, setCurrentQ] = useState(1);
+  const [result1, setResult1] = useState(null)
+  const [result2, setResult2] = useState(null)
+
+  useEffect(() => {
+    if (actionData?.scoring) {
+      console.log(actionData)
+      if (actionData?.currentQ === "1") {
+        setResult1(actionData.scoring);
+      } else if (actionData?.currentQ === "2") {
+        setResult2(actionData.scoring);
+      }
+    }
+  }, [actionData?.currentQ])
+
+  console.log("result1", result1)
+  console.log("result2", result2)
 
   useEffect(() => {
     const resetFormOnPageShow = () => {
@@ -139,17 +162,24 @@ export default function Index() {
         <img src="/logo.webp" className="h-20" />
       </header>
       <main className="px-10 pt-4 flex gap-10">
-        <Form method="post" ref={formRef} className="grid w-full max-w-md items-center gap-6 border-r-2 border-r-slate-100 pr-8">
-          <h2 className="text-lg font-semibold underline">Client view</h2>
+        <Form method="post" ref={formRef} className={`grid w-full max-w-md items-center gap-6 border-r-2 border-r-slate-100 pr-8 ${currentQ >= 3 ? "opacity-35" : ""}`}>
+          <div className="flex gap-4">
+            <span className={currentQ === 1 ? "underline font-bold" : "text-slate-400"}>Question 1</span>
+            <span className={currentQ === 2 ? "underline font-bold" : "text-slate-400"}>Question 2</span>
+            <span className={currentQ >= 3 ? "underline font-bold" : "text-slate-400"}>Results →</span>
+          </div>
           <VerifierBlock error={actionData?.errors?.verifierBlock} />
           <VerificationStandardBlock error={actionData?.errors?.verificationStandardBlock} />
           <AssuranceLevelBlock />
           <ScopeVerificationBlock />
           <DisclosureInformationBlock />
-          <Button type="submit">Submit</Button>
+          <input className="hidden" value={currentQ-1} name="currentQ"/>
+          {currentQ <= 2 ? <Button type="submit" onClick={() => setCurrentQ(currentQ + 1)}>
+            { currentQ === 1 ? "Next Question" : currentQ === 2 ? "Submit" : ""}
+          </Button> : null}
         </Form>
         <div className="px-8 w-full space-y-8">
-          <h2 className="text-lg font-semibold underline">JESG view</h2>
+          <h2 className="text-lg font-semibold underline">Results view</h2>
           <div>
             <h3 className="text-xl mb-2">Question (Scoring multiplier)</h3>
             <Button className="mr-2" onClick={() => setQuestionType(1)} variant={questionType === 1 ? "default" : "outline"}>Question 1</Button>
@@ -157,14 +187,14 @@ export default function Index() {
           </div>
           <h2 className="text-2xl">Scoring Summary</h2>
           <h3 className="text-xl">Scale</h3>
-          {actionData?.scoring ? <ScoringDisplay scoring={actionData?.scoring} /> : null}
+          {actionData?.scoring ? <ScoringDisplay scoring={questionType === 1 ? result1 : result2} /> : null}
           <h3 className="text-xl">Score</h3>
-          {actionData?.scoring ? <p className="text-2xl">{getScore(questionType, actionData?.scoring)}</p> : null}
+          {actionData?.scoring ? <p className="text-2xl">{getScore(questionType, questionType === 1 ? result1 : result2)}</p> : null}
 
           <hr />
           <Button variant="outline" onClick={() => setViewBackend(!viewBackend)}>{!viewBackend ? "View" : "Hide"} previous submissions (database entries)</Button>
           {viewBackend ? <><h3 className="text-xl">Previous Submissions</h3>
-          <div className="flex flex-col gap-4 text-sm max-w-lg">
+          <div className="flex flex-col gap-4 text-sm max-w-4xl overflow-scroll max-h-40">
             {data.submissions.map((submission, index) => (
               <div key={index} className="flex gap-2">
                 <p><span className="font-bold">Verifier:</span> {submission.verifier}</p>
